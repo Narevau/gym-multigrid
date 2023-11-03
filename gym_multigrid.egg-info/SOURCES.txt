@@ -1,3 +1,4 @@
+LICENSE
 README.md
 setup.py
 gym_multigrid/__init__.py
@@ -11,4 +12,5 @@ gym_multigrid.egg-info/requires.txt
 gym_multigrid.egg-info/top_level.txt
 gym_multigrid/envs/__init__.py
 gym_multigrid/envs/collect_game.py
+gym_multigrid/envs/doorgame.py
 gym_multigrid/envs/soccer_game.py
