@@ -4,8 +4,8 @@ from enum import IntEnum
 import numpy as np
 from gym import error, spaces, utils
 from gym.utils import seeding
-from .rendering import *
-from .window import Window
+from gym_multigrid.rendering import *
+from gym_multigrid.window import Window
 import numpy as np
 
 # Size in pixels of a tile in the full-scale human view
@@ -273,10 +273,10 @@ class Door(WorldObj):
     def see_behind(self):
         return self.is_open
 
-    def toggle(self, env, pos):
+    def toggle(self, env, pos, agent):
         # If the player has the right key to open the door
         if self.is_locked:
-            if isinstance(env.carrying, Key) and env.carrying.color == self.color:
+            if isinstance(agent.carrying, Key) and agent.carrying.color == self.color:
                 self.is_locked = False
                 self.is_open = True
                 return True
@@ -1280,7 +1280,7 @@ class MultiGridEnv(gym.Env):
                         self._reward(i, rewards, 1)
                     elif fwd_cell.type == 'switch':
                         self._handle_switch(i, rewards, fwd_pos, fwd_cell)
-                elif fwd_cell is None or fwd_cell.can_overlap():
+                if fwd_cell is None or fwd_cell.can_overlap():
                     self.grid.set(*fwd_pos, self.agents[i])
                     self.grid.set(*self.agents[i].pos, None)
                     self.agents[i].pos = fwd_pos
@@ -1300,7 +1300,10 @@ class MultiGridEnv(gym.Env):
             # Toggle/activate an object
             elif actions[i] == self.actions.toggle:
                 if fwd_cell:
-                    fwd_cell.toggle(self, fwd_pos)
+                    if fwd_cell.type == 'door':
+                        fwd_cell.toggle(self, fwd_pos, self.agents[i])
+                    else:
+                        fwd_cell.toggle(self, fwd_pos)
 
             # Done action (not used by default)
             elif actions[i] == self.actions.done:
