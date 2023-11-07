@@ -12,8 +12,8 @@ class DoorGameEnv(MultiGridEnv):
         self.world = World
         self.door = Door(self.world, 'red', is_open=False, is_locked=True)
 
-        #self.switch = Switch(self.world)
-        self.preassurePlateCoords = np.array([5, 4])
+        self.switch = Switch(self.world)
+        self.switchCoords = np.array([5, 4])
 
         agents: List[Agent] = []
         
@@ -47,15 +47,16 @@ class DoorGameEnv(MultiGridEnv):
         self.place_obj(self.door, top=(6, 3), size=(1, 1))
         
         # Switch
-        # self.grid.set(5, 4, self.switch)
-        #self.place_obj(self.switch, top=(5, 4), size=(1, 1))
+        self.grid.set(self.switchCoords[0], self.switchCoords[1], self.switch)
+        # self.place_obj(self.switch, top=(5, 4), size=(1, 1))
 
         # Goal, reward defined here
-        #self.place_obj(ObjectGoal(self.world, 0, 'ball'),top=(7,1), size=(3,5)) 
+        self.place_obj(ObjectGoal(self.world, 0, 'ball'),top=(4,4), size=(1,1)) 
 
         # Ball
-        # self.place_obj(Ball(self.world,0))
-       
+        #self.place_obj(Ball(self.world,0))
+        self.grid.set(5,3,Ball(self.world,0))
+
         # Randomize the player start position and orientation
         for a in self.agents:
             self.place_agent(a)
@@ -64,11 +65,45 @@ class DoorGameEnv(MultiGridEnv):
     # If the is on the switch, open the door
     def _handle_special_moves(self, i, rewards, fwd_pos, fwd_cell):
         agent = self.agents[i]
-        print("agent pos:", agent.pos)
-        if np.array_equal(self.preassurePlateCoords, agent.pos):
+        if np.array_equal(self.switchCoords, agent.pos):
             self.door.is_open = True
         else: 
             self.door.is_open = False
+
+
+    def _handle_pickup(self, i, rewards, fwd_pos, fwd_cell):
+        if fwd_cell:
+            if fwd_cell.can_pickup():
+                if self.agents[i].carrying is None:
+                    self.agents[i].carrying = fwd_cell
+                    self.agents[i].carrying.cur_pos = np.array([-1, -1])
+                    self.grid.set(*fwd_pos, None)
+    
+
+    def _handle_drop(self, i, rewards, fwd_pos, fwd_cell):
+        if self.agents[i].carrying:
+            if fwd_cell:
+                # Drop ball on goal
+                if fwd_cell.type == 'objgoal' and fwd_cell.target_type == self.agents[i].carrying.type:
+                    if self.agents[i].carrying.index in [0, fwd_cell.index]:
+                        self._reward(fwd_cell.index, rewards, fwd_cell.reward)
+                        self.agents[i].carrying = None
+                # Give ball to other agent
+                elif fwd_cell.type=='agent':
+                    if fwd_cell.carrying is None:
+                        fwd_cell.carrying = self.agents[i].carrying
+                        self.agents[i].carrying = None
+            else:
+                self.grid.set(*fwd_pos, self.agents[i].carrying)
+                self.agents[i].carrying.cur_pos = fwd_pos
+                self.agents[i].carrying = None
+
+
+    def _reward(self, i, rewards,reward=1):
+        # Shared reward for all agents
+        for j,a in enumerate(self.agents):
+                rewards[j]+=reward
+                print(f"Agent {j} got reward {reward}")
 
 
     def step(self, actions):
