@@ -10,28 +10,28 @@ class DoorGameEnv(MultiGridEnv):
         view_size=None,
     ):
         self.world = World
+        
         self.door = Door(self.world, 'red', is_open=False, is_locked=True)
+        self.pressurePlate = PreassurePlate(self.world, 5, 4)
 
-        self.switch = Switch(self.world)
-        self.switchCoords = np.array([5, 4])
-
-        agents: List[Agent] = []
+        self.agents: List[Agent] = []
         
 
         for i in agents_index:
-            agents.append(Agent(self.world, i, view_size=view_size))
+            self.agents.append(Agent(self.world, i, view_size=view_size))
 
         super().__init__(
             max_steps= 1000,
             width=width,
             height=height,
-            agents=agents,
+            agents=self.agents,
             agent_view_size=view_size,  
         )
 
 
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
+
         # Generate the surrounding walls
         self.grid.horz_wall(self.world, 0, 0)
         self.grid.horz_wall(self.world, 0, height-1)
@@ -43,18 +43,15 @@ class DoorGameEnv(MultiGridEnv):
         self.grid.vert_wall(self.world, width-5, height-3, 3)
 
         # Door
-        # self.grid.set(6, 3, self.door)
-        self.place_obj(self.door, top=(6, 3), size=(1, 1))
+        self.grid.set(6, 3, self.door)
         
-        # Switch
-        self.grid.set(self.switchCoords[0], self.switchCoords[1], self.switch)
-        # self.place_obj(self.switch, top=(5, 4), size=(1, 1))
+        # Preassureplate
+        self.grid.set(self.pressurePlate.pos[0], self.pressurePlate.pos[1], self.pressurePlate.switch)
 
         # Goal, reward defined here
         self.place_obj(ObjectGoal(self.world, 0, 'ball'),top=(4,4), size=(1,1)) 
 
         # Ball
-        #self.place_obj(Ball(self.world,0))
         self.grid.set(5,3,Ball(self.world,0))
 
         # Randomize the player start position and orientation
@@ -62,10 +59,10 @@ class DoorGameEnv(MultiGridEnv):
             self.place_agent(a)
 
 
-    # If the is on the switch, open the door
+    # If the agent is on the switch, open the door
     def _handle_special_moves(self, i, rewards, fwd_pos, fwd_cell):
         agent = self.agents[i]
-        if np.array_equal(self.switchCoords, agent.pos):
+        if np.array_equal(self.pressurePlate.pos, agent.pos):
             self.door.is_open = True
         else: 
             self.door.is_open = False
@@ -110,12 +107,21 @@ class DoorGameEnv(MultiGridEnv):
         obs, rewards, done, info = MultiGridEnv.step(self, actions)
         return obs, rewards, done, info
 
-class DoorGame1(DoorGameEnv):
+
+class PreassurePlate():
+    def __init__(self, world, x, y):
+        self.world = world
+        self.pos = np.array([x, y])
+        # Render as switch
+        self.switch = Switch(self.world)
+
+
+class DoorGameDebugSingle(DoorGameEnv):
     def __init__(self):
         super().__init__(
         width=11,
         height=7,
         agents_index = [1],
-        view_size=7)
+        view_size=5)
 
 # d = DoorGame1()
