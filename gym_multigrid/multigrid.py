@@ -986,13 +986,13 @@ class MultiGridEnv(gym.Env):
     @property
     def steps_remaining(self):
         return self.max_steps - self.step_count
-
+    """
     def __str__(self):
-        """
+        
         Produce a pretty string of the environment's grid along with the agent.
         A grid cell is represented by 2-character string, the first one for
         the object and the second one for the color.
-        """
+        
 
         # Map of object types to short string
         OBJECT_TO_STR = {
@@ -1047,7 +1047,7 @@ class MultiGridEnv(gym.Env):
                 str += '\n'
 
         return str
-
+    """
     def _gen_grid(self, width, height):
         assert False, "_gen_grid needs to be implemented by each environment"
 
