@@ -1,31 +1,31 @@
 from gym_multigrid.multigrid import *
 from typing import List
+from ray.rllib.env.env_context import EnvContext
 
 class DoorGameEnv(MultiGridEnv):
     def __init__(
         self,
-        width=None,
-        height=None,
-        agents_index = [],
-        view_size=None,
+        env_config: EnvContext,
     ):
         self.world = World
-        
         self.door = Door(self.world, 'red', is_open=False, is_locked=True)
         self.pressurePlate = PreassurePlate(self.world, 5, 4)
 
         self.agents: List[Agent] = []
-        
+        self.agents_index = env_config["agents_index"]
+        self.view_size = env_config["view_size"]
+        self.width = env_config["width"]
+        self.height = env_config["height"]
 
-        for i in agents_index:
-            self.agents.append(Agent(self.world, i, view_size=view_size))
+        for i in self.agents_index:
+            self.agents.append(Agent(self.world, i, view_size=self.view_size))
 
         super().__init__(
             max_steps= 1000,
-            width=width,
-            height=height,
+            width=self.width,
+            height=self.height,
             agents=self.agents,
-            agent_view_size=view_size,  
+            agent_view_size=self.view_size,  
         )
 
 
