@@ -9,9 +9,9 @@ class DoorGameEnv(MultiGridEnv):
     ):
         self.world = World
         self.door = Door(self.world, 'red', is_open=False, is_locked=True)
-        self.pressurePlate = PreassurePlate(self.world, 5, 4)
-
         self.agents: List[Agent] = []
+        self.pressure_plates: List[PreassurePlate] = []
+        self.reward_tile_coords = env_config["reward_tile_coords"]
         self.agents_index = env_config["agents_index"]
         self.view_size = env_config["view_size"]
         self.width = env_config["width"]
@@ -21,6 +21,9 @@ class DoorGameEnv(MultiGridEnv):
 
         for i in self.agents_index:
             self.agents.append(Agent(self.world, i, view_size=self.view_size))
+
+        for pos in env_config["pressure_plates_coords"]:
+            self.pressure_plates.append(PreassurePlate(self.world, pos[0], pos[1]))
 
         super().__init__(
             max_steps= 1000,
@@ -48,11 +51,14 @@ class DoorGameEnv(MultiGridEnv):
         # Door
         self.grid.set(6, 3, self.door)
         
-        # Preassureplate
-        self.grid.set(self.pressurePlate.pos[0], self.pressurePlate.pos[1], self.pressurePlate.switch)
+        # Preassure plates
+        for pressure_plate in self.pressure_plates:
+            self.grid.set(pressure_plate.pos[0], pressure_plate.pos[1], pressure_plate.switch)
 
-        # Goal, reward defined here
-        self.place_obj(ObjectGoal(self.world, 0, 'ball'),top=(4,4), size=(1,1)) 
+        # Goals
+        #self.place_obj(ObjectGoal(self.world, 0, 'ball'),top=(4,4), size=(1,1)) 
+        for reward_tile_coord in self.reward_tile_coords:
+            self.grid.set(reward_tile_coord[0], reward_tile_coord[1], ObjectGoal(self.world, 0, 'ball', reward=1))
 
         # Ball
         self.grid.set(5,3,Ball(self.world,0))
@@ -65,10 +71,11 @@ class DoorGameEnv(MultiGridEnv):
     # If the agent is on the switch, open the door
     def _handle_special_moves(self, i, rewards, fwd_pos, fwd_cell):
         agent = self.agents[i]
-        if np.array_equal(self.pressurePlate.pos, agent.pos):
-            self.door.is_open = True
-        else: 
-            self.door.is_open = False
+        for pressure_plate in self.pressure_plates:
+            if np.array_equal(pressure_plate.pos, agent.pos):
+                self.door.is_open = True
+            else: 
+                self.door.is_open = False
 
 
     def _handle_pickup(self, i, rewards, fwd_pos, fwd_cell):
