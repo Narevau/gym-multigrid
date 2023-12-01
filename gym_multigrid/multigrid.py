@@ -1,8 +1,8 @@
 import math
-import gym
+import gymnasium as gym
 from enum import IntEnum
 import numpy as np
-from gym import error, spaces, utils
+from gymnasium import error, spaces, utils
 from gym.utils import seeding
 from gym_multigrid.rendering import *
 from gym_multigrid.window import Window
@@ -875,8 +875,8 @@ class MultiGridEnv(gym.Env):
     """
 
     metadata = {
-        'render.modes': ['human', 'rgb_array'],
-        'video.frames_per_second': 10
+        'render_modes': ['human', 'rgb_array'],
+        'render_fps': 10
     }
 
     # Enumeration of possible actions
@@ -951,7 +951,7 @@ class MultiGridEnv(gym.Env):
         # Initialize the state
         self.reset()
 
-    def reset(self):
+    def reset(self, *, seed=None, options=None):
 
         # Generate a new random grid at the start of each episode
         # To keep the same grid for each episode, call env.seed() with
@@ -974,9 +974,13 @@ class MultiGridEnv(gym.Env):
         if self.partial_obs:
             obs = self.gen_obs()
         else:
-            obs = [self.grid.encode_for_agents(self.agents[i].pos) for i in range(len(self.agents))]
-        obs=[self.objects.normalize_obs*ob for ob in obs]
-        return obs
+            obs = [self.grid.encode_for_agents(self.objects, self.agents[i].pos) for i in range(len(self.agents))]
+        obs=np.array([self.objects.normalize_obs*ob for ob in obs])
+
+        # For gymnasium spec compliance
+        info = {}
+
+        return obs, info
 
     def seed(self, seed=1337):
         # Seed the random number generator
@@ -1249,7 +1253,10 @@ class MultiGridEnv(gym.Env):
         order = np.random.permutation(len(actions))
 
         rewards = np.zeros(len(actions))
-        done = False
+        # done = False
+        truncated = False
+        terminated = False
+
 
         for i in order:
 
@@ -1276,7 +1283,7 @@ class MultiGridEnv(gym.Env):
             elif actions[i] == self.actions.forward:
                 if fwd_cell is not None:
                     if fwd_cell.type == 'goal':
-                        done = True
+                        terminated = True
                         self._reward(i, rewards, 1)
                     elif fwd_cell.type == 'switch':
                         self._handle_switch(i, rewards, fwd_pos, fwd_cell)
@@ -1313,16 +1320,16 @@ class MultiGridEnv(gym.Env):
                 assert False, "unknown action"
 
         if self.step_count >= self.max_steps:
-            done = True
+            truncated = True
 
         if self.partial_obs:
             obs = self.gen_obs()
         else:
-            obs = [self.grid.encode_for_agents(self.agents[i].pos) for i in range(len(actions))]
+            obs = [self.grid.encode_for_agents(self.objects, self.agents[i].pos) for i in range(len(actions))]
 
-        obs=[self.objects.normalize_obs*ob for ob in obs]
+        obs=np.array([self.objects.normalize_obs*ob for ob in obs])
 
-        return obs, rewards, done, {}
+        return obs, rewards, terminated, truncated, {}
 
     def gen_obs_grid(self):
         """
@@ -1364,7 +1371,7 @@ class MultiGridEnv(gym.Env):
 
         # Encode the partially observable view into a numpy array
         obs = [grid.encode_for_agents(self.objects, [grid.width // 2, grid.height - 1], vis_mask) for grid, vis_mask in zip(grids, vis_masks)]
-
+        
         return obs
 
     def get_obs_render(self, obs, tile_size=TILE_PIXELS // 2):

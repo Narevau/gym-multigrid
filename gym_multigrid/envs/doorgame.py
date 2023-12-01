@@ -16,6 +16,8 @@ class DoorGameEnv(MultiGridEnv):
         self.view_size = env_config["view_size"]
         self.width = env_config["width"]
         self.height = env_config["height"]
+        self.partial_obs = env_config["partial_obs"]
+        self.num_agents = len(self.agents_index)
 
         for i in self.agents_index:
             self.agents.append(Agent(self.world, i, view_size=self.view_size))
@@ -25,7 +27,8 @@ class DoorGameEnv(MultiGridEnv):
             width=self.width,
             height=self.height,
             agents=self.agents,
-            agent_view_size=self.view_size,  
+            agent_view_size=self.view_size,
+            partial_obs=self.partial_obs, 
         )
 
 
@@ -104,8 +107,8 @@ class DoorGameEnv(MultiGridEnv):
 
 
     def step(self, actions):
-        obs, rewards, done, info = MultiGridEnv.step(self, actions)
-        return obs, rewards, done, info
+        obs, rewards, done, truncated, info = MultiGridEnv.step(self, actions)
+        return obs, rewards, done, truncated, info
 
 
 class PreassurePlate():
@@ -114,14 +117,3 @@ class PreassurePlate():
         self.pos = np.array([x, y])
         # Render as switch
         self.switch = Switch(self.world)
-
-
-class DoorGameDebugSingle(DoorGameEnv):
-    def __init__(self):
-        super().__init__(
-        width=11,
-        height=7,
-        agents_index = [1],
-        view_size=5)
-
-# d = DoorGame1()
