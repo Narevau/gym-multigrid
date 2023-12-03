@@ -893,7 +893,9 @@ class MultiGridEnv(gym.Env):
             partial_obs=True,
             agent_view_size=7,
             actions_set=Actions,
-            objects_set = World
+            objects_set = World,
+            door=None,
+            door_pos=None
     ):
         self.agents = agents
 
@@ -944,6 +946,10 @@ class MultiGridEnv(gym.Env):
         self.height = height
         self.max_steps = max_steps
         self.see_through_walls = see_through_walls
+
+        #TODO: very hacky
+        self.door=door 
+        self.door_pos=door_pos
 
         # Initialize the RNG
         self.seed(seed=seed)
@@ -1247,6 +1253,7 @@ class MultiGridEnv(gym.Env):
 
         return obs_cell is not None and obs_cell.type == world_cell.type
 
+
     def step(self, actions):
         self.step_count += 1
 
@@ -1256,7 +1263,6 @@ class MultiGridEnv(gym.Env):
         # done = False
         truncated = False
         terminated = False
-
 
         for i in order:
 
@@ -1288,8 +1294,12 @@ class MultiGridEnv(gym.Env):
                     elif fwd_cell.type == 'switch':
                         self._handle_switch(i, rewards, fwd_pos, fwd_cell)
                 if fwd_cell is None or fwd_cell.can_overlap():
+                    #TODO: I passed my only door directly, better to manage previous grid items
                     self.grid.set(*fwd_pos, self.agents[i])
-                    self.grid.set(*self.agents[i].pos, None)
+                    if np.array_equal(self.agents[i].pos, np.array(self.door_pos)) and self.door is not None:
+                        self.grid.set(*self.agents[i].pos, self.door)
+                    else:
+                        self.grid.set(*self.agents[i].pos, None)
                     self.agents[i].pos = fwd_pos
                 self._handle_special_moves(i, rewards, fwd_pos, fwd_cell)
 

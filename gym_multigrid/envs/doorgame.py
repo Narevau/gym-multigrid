@@ -9,6 +9,7 @@ class DoorGameEnv(MultiGridEnv):
     ):
         self.world = World
         self.door = Door(self.world, 'red', is_open=False, is_locked=True)
+        self.door_pos = (6, 3)
         self.agents: List[Agent] = []
         self.pressure_plates: List[PreassurePlate] = []
         self.reward_tile_coords = env_config["reward_tile_coords"]
@@ -34,6 +35,8 @@ class DoorGameEnv(MultiGridEnv):
             agents=self.agents,
             agent_view_size=self.view_size,
             partial_obs=self.partial_obs, 
+            door=self.door,
+            door_pos=self.door_pos,
         )
 
 
@@ -51,7 +54,7 @@ class DoorGameEnv(MultiGridEnv):
         self.grid.vert_wall(self.world, width-5, height-3, 3)
 
         # Door
-        self.grid.set(6, 3, self.door)
+        self.grid.set(self.door_pos[0], self.door_pos[1], self.door)
         
         # Preassure plates
         for pressure_plate in self.pressure_plates:
@@ -75,12 +78,14 @@ class DoorGameEnv(MultiGridEnv):
     def _handle_special_moves(self, i, rewards, fwd_pos, fwd_cell):
         agent = self.agents[i]
         for pressure_plate in self.pressure_plates:
-            print(np.array_equal(pressure_plate.pos, agent.pos))
             if np.array_equal(pressure_plate.pos, agent.pos):
                 self.door.is_open = True
-            else: 
-                self.door.is_open = False
-
+                pressure_plate.occupied = i
+            else:
+                if pressure_plate.occupied == i:
+                    self.door.is_open = False
+                    pressure_plate.occupied = None
+        
 
     def _handle_pickup(self, i, rewards, fwd_pos, fwd_cell):
         if fwd_cell:
@@ -128,3 +133,4 @@ class PreassurePlate():
         self.pos = np.array([x, y])
         # Render as switch
         self.switch = Switch(self.world)
+        self.occupied = None
