@@ -102,7 +102,7 @@ class DoorGameEnv(MultiGridEnv):
                 # Drop ball on goal
                 if fwd_cell.type == 'objgoal' and fwd_cell.target_type == self.agents[i].carrying.type:
                     if self.agents[i].carrying.index in [0, fwd_cell.index]:
-                        self._reward(fwd_cell.index, rewards, fwd_cell.reward)
+                        # self._reward(fwd_cell.index, rewards, fwd_cell.reward)
                         self.agents[i].carrying = None
                 # Give ball to other agent
                 elif fwd_cell.type=='agent':
