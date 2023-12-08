@@ -21,15 +21,18 @@ class DoorGameEnv(MultiGridEnv):
         self.height = env_config["height"]
         self.partial_obs = env_config["partial_obs"]
         self.num_agents = len(self.agents_index)
+        self.max_steps = env_config["max_steps"]
 
         for i in self.agents_index:
-            self.agents.append(Agent(self.world, i, view_size=self.view_size))
+            agent = Agent(self.world, i, view_size=self.view_size)
+            agent.dir = 0
+            self.agents.append(agent)
 
         for pos in env_config["pressure_plates_coords"]:
             self.pressure_plates.append(PreassurePlate(self.world, pos[0], pos[1]))
 
         super().__init__(
-            max_steps= 1000,
+            max_steps=self.max_steps,
             width=self.width,
             height=self.height,
             agents=self.agents,
@@ -70,7 +73,7 @@ class DoorGameEnv(MultiGridEnv):
 
         # Randomize the player start position and orientation
         for i in range(len(self.agents)):
-            self.place_agent(self.agents[i], top=self.agents_coords[i], size=(1,1))
+            self.place_agent(self.agents[i], top=self.agents_coords[i], size=(1,1), rand_dir=False)
             #self.grid.set(self.agents_coords[i][0], self.agents_coords[i][1], self.agents[i])
 
 

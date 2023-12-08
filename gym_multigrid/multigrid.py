@@ -1331,7 +1331,7 @@ class MultiGridEnv(gym.Env):
 
             else:
                 assert False, "unknown action"
-
+        
         if self.step_count >= self.max_steps:
             truncated = True
 
