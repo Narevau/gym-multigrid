@@ -22,6 +22,13 @@ class DoorGameEnv(MultiGridEnv):
         self.partial_obs = env_config["partial_obs"]
         self.num_agents = len(self.agents_index)
         self.max_steps = env_config["max_steps"]
+        self.easy_reward = env_config["easy_reward"]
+        self.pressure_plates_pressed_reward = False
+        self.ball_picked_up_reward = False
+
+        if self.easy_reward:
+            self.pressure_plates_pressed_reward = True
+            self.ball_picked_up_reward = True
 
         for i in self.agents_index:
             agent = Agent(self.world, i, view_size=self.view_size)
@@ -84,6 +91,10 @@ class DoorGameEnv(MultiGridEnv):
             if np.array_equal(pressure_plate.pos, agent.pos):
                 self.door.is_open = True
                 pressure_plate.occupied = i
+                # In easy mode, give a reward for reaching the pressure plate
+                if self.pressure_plates_pressed_reward == True:
+                    self._reward(i, rewards, reward=0.5)
+                    self.pressure_plates_pressed_reward = False
             else:
                 if pressure_plate.occupied == i:
                     self.door.is_open = False
@@ -97,6 +108,10 @@ class DoorGameEnv(MultiGridEnv):
                     self.agents[i].carrying = fwd_cell
                     self.agents[i].carrying.cur_pos = np.array([-1, -1])
                     self.grid.set(*fwd_pos, None)
+                    # In easy mode, give a reward for picking up the ball
+                    if self.ball_picked_up_reward == True:
+                        self._reward(i, rewards, reward=0.5)
+                        self.ball_picked_up_reward = False
     
 
     def _handle_drop(self, i, rewards, fwd_pos, fwd_cell):
