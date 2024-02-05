@@ -1263,6 +1263,12 @@ class MultiGridEnv(gym.Env):
         # done = False
         truncated = False
         terminated = False
+        
+        # If actions is a list of probabilities, sample one action for each agent
+        if not np.issubdtype(actions[0].dtype,np.integer):
+            for j in range(len(actions)):
+                action = np.random.choice(len(actions[j]), p=actions[j])
+                actions[j] = action
 
         for i in order:
 

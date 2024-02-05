@@ -137,7 +137,7 @@ class DoorGameEnv(MultiGridEnv):
         # Shared reward for all agents
         for j,a in enumerate(self.agents):
                 rewards[j]+=reward
-                print(f"Agent {j} got reward {reward}")
+                #print(f"Agent {j} got reward {reward}")
 
 
     def step(self, actions):
