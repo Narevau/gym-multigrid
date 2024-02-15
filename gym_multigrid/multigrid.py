@@ -751,7 +751,7 @@ class Grid:
         if vis_mask is None:
             vis_mask = np.ones((self.width, self.height), dtype=bool)
 
-        array = np.zeros((self.width, self.height, world.encode_dim), dtype='uint8')
+        array = np.zeros((world.encode_dim, self.width, self.height), dtype='uint8')
 
         for i in range(self.width):
             for j in range(self.height):
@@ -759,16 +759,16 @@ class Grid:
                     v = self.get(i, j)
 
                     if v is None:
-                        array[i, j, 0] = world.OBJECT_TO_IDX['empty']
-                        array[i, j, 1] = 0
-                        array[i, j, 2] = 0
+                        array[0, i, j] = world.OBJECT_TO_IDX['empty']
+                        array[1, i, j] = 0
+                        array[2, i, j] = 0
                         if world.encode_dim > 3:
-                            array[i, j, 3] = 0
-                            array[i, j, 4] = 0
-                            array[i, j, 5] = 0
+                            array[3, i, j] = 0
+                            array[4, i, j] = 0
+                            array[5, i, j] = 0
 
                     else:
-                        array[i, j, :] = v.encode(world, current_agent=np.array_equal(agent_pos, (i, j)))
+                        array[:, i, j] = v.encode(world, current_agent=np.array_equal(agent_pos, (i, j)))
 
         return array
 
@@ -1233,7 +1233,7 @@ class MultiGridEnv(gym.Env):
             agent.dir = self._rand_int(0, 4)
 
         agent.init_dir = agent.dir
-
+        
         return pos
 
     def agent_sees(self, a, x, y):
