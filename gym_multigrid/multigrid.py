@@ -447,7 +447,6 @@ class Agent(WorldObj):
         """
         Get the position of the cell that is right in front of the agent
         """
-
         return self.pos + self.dir_vec
 
     def get_view_coords(self, i, j):
@@ -750,7 +749,7 @@ class Grid:
         """
         if vis_mask is None:
             vis_mask = np.ones((self.width, self.height), dtype=bool)
-
+        '''
         array = np.zeros((world.encode_dim, self.width, self.height), dtype='uint8')
 
         for i in range(self.width):
@@ -771,6 +770,28 @@ class Grid:
                         array[:, i, j] = v.encode(world, current_agent=np.array_equal(agent_pos, (i, j)))
 
         return array
+        '''
+        array = np.zeros((self.width, self.height, world.encode_dim), dtype='uint8')
+
+        for i in range(self.width):
+            for j in range(self.height):
+                if vis_mask[i, j]:
+                    v = self.get(i, j)
+
+                    if v is None:
+                        array[i, j, 0] = world.OBJECT_TO_IDX['empty']
+                        array[i, j, 1] = 0
+                        array[i, j, 2] = 0
+                        if world.encode_dim > 3:
+                            array[i, j, 3] = 0
+                            array[i, j, 4] = 0
+                            array[i, j, 5] = 0
+
+                    else:
+                        array[i, j, :] = v.encode(world, current_agent=np.array_equal(agent_pos, (i, j)))
+
+        return array
+        
 
     # @staticmethod
     # def decode(array):
@@ -1265,10 +1286,10 @@ class MultiGridEnv(gym.Env):
         terminated = False
         
         # If actions is a list of probabilities, sample one action for each agent
-        if not np.issubdtype(actions[0].dtype,np.integer):
-            for j in range(len(actions)):
-                action = np.random.choice(len(actions[j]), p=actions[j])
-                actions[j] = action
+        #if not np.issubdtype(actions[0].dtype,np.integer):
+        #    for j in range(len(actions)):
+        #        action = np.random.choice(len(actions[j]), p=actions[j])
+        #        actions[j] = action
 
         for i in order:
 

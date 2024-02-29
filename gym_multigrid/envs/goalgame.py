@@ -17,6 +17,8 @@ class GoalGameEnv(MultiGridEnv):
         self.goal_coord = env_config["goal_coord"]
         self.max_steps = env_config["max_steps"]
         self.agents_coords = env_config["agents_coords"]
+        self.see_through_walls = env_config.get('see_through_walls', False)
+        self.decaying_reward = env_config.get('decaying_reward', False)
 
         for i in range(len(self.agents_index)):
             agent = Agent(self.world, self.agents_index[i], view_size=self.view_size)
@@ -32,6 +34,7 @@ class GoalGameEnv(MultiGridEnv):
         agents=self.agents,
         agent_view_size=self.view_size,
         partial_obs=self.partial_obs,
+        see_through_walls=self.see_through_walls,
     )   
         
     def _gen_grid(self, width, height):
@@ -43,12 +46,13 @@ class GoalGameEnv(MultiGridEnv):
         self.grid.vert_wall(self.world, 0, 0)
         self.grid.vert_wall(self.world, width-1, 0)
 
-        # Door
-        self.grid.set(self.goal_coord[0], self.goal_coord[1], Goal(self.world,0,reward=1))
+        # Goal
+        self.grid.set(self.goal_coord[0], self.goal_coord[1], Goal(self.world,0,reward=1,color=1))
 
         # Place the agents
         for i in range(len(self.agents)):
             self.grid.set(self.agents_coords[i][0], self.agents_coords[i][1], self.agents[i])
+            self.agents[i].pos = self.agents_coords[i]
 
     def step(self, actions):
         obs, rewards, done, truncated, info = MultiGridEnv.step(self, actions)
@@ -62,4 +66,7 @@ class GoalGameEnv(MultiGridEnv):
         return obs, info
     
     def _reward(self, i, rewards,reward=1):
-        rewards[i] = rewards[i] + reward
+        if self.decaying_reward:
+            rewards[i] = 1 - 0.9 * (self.step_count / self.max_steps)
+        else:
+            rewards[i] = rewards[i] + reward
