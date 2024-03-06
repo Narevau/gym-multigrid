@@ -1339,10 +1339,12 @@ class MultiGridEnv(gym.Env):
 
             # Drop an object
             elif actions[i] == self.actions.drop:
-                self._handle_drop(i, rewards, fwd_pos, fwd_cell)
-                if fwd_cell is not None and fwd_cell.type == 'objgoal':
+                # Check if one of the agents dropped ball at goal
+                drop_succsessfull = self._handle_drop(i, rewards, fwd_pos, fwd_cell)
+                if drop_succsessfull is None:
+                    drop_succsessfull = False
+                if drop_succsessfull:
                     terminated = True
-                    self._reward(i, rewards, 1)
 
             # Toggle/activate an object
             elif actions[i] == self.actions.toggle:

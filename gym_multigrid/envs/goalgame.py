@@ -53,6 +53,7 @@ class GoalGameEnv(MultiGridEnv):
         for i in range(len(self.agents)):
             self.grid.set(self.agents_coords[i][0], self.agents_coords[i][1], self.agents[i])
             self.agents[i].pos = self.agents_coords[i]
+            self.agents[i].dir = 0
 
     def step(self, actions):
         obs, rewards, done, truncated, info = MultiGridEnv.step(self, actions)

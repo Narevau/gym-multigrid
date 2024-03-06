@@ -25,14 +25,18 @@ class DoorGameEnv(MultiGridEnv):
         self.easy_reward = env_config["easy_reward"]
         self.pressure_plates_pressed_reward = False
         self.ball_picked_up_reward = False
+        self.see_through_walls = env_config.get('see_through_walls', False)
+        self.decaying_reward = env_config.get('decaying_reward', False)
 
         if self.easy_reward:
             self.pressure_plates_pressed_reward = True
             self.ball_picked_up_reward = True
 
-        for i in self.agents_index:
-            agent = Agent(self.world, i, view_size=self.view_size)
+        for i in range(len(self.agents_index)):
+            agent = Agent(self.world, self.agents_index[i], view_size=self.view_size)
             agent.dir = 0
+            agent.pos = self.agents_coords[i]
+            agent.init_pos = self.agents_coords[i]
             self.agents.append(agent)
 
         for pos in env_config["pressure_plates_coords"]:
@@ -47,6 +51,7 @@ class DoorGameEnv(MultiGridEnv):
             partial_obs=self.partial_obs, 
             door=self.door,
             door_pos=self.door_pos,
+            see_through_walls=self.see_through_walls
         )
 
 
@@ -64,10 +69,12 @@ class DoorGameEnv(MultiGridEnv):
         self.grid.vert_wall(self.world, width-5, height-3, 3)
 
         # Door
+        self.door.is_open = False
         self.grid.set(self.door_pos[0], self.door_pos[1], self.door)
         
         # Preassure plates
         for pressure_plate in self.pressure_plates:
+            pressure_plate.occupied = None
             self.grid.set(pressure_plate.pos[0], pressure_plate.pos[1], pressure_plate.switch)
 
         # Goals
@@ -78,10 +85,11 @@ class DoorGameEnv(MultiGridEnv):
         # Ball
         self.grid.set(self.ball_coord[0], self.ball_coord[1], Ball(self.world,0))
 
-        # Randomize the player start position and orientation
+        # Agents
         for i in range(len(self.agents)):
-            self.place_agent(self.agents[i], top=self.agents_coords[i], size=(1,1), rand_dir=False)
-            #self.grid.set(self.agents_coords[i][0], self.agents_coords[i][1], self.agents[i])
+            self.grid.set(self.agents_coords[i][0], self.agents_coords[i][1], self.agents[i])
+            self.agents[i].pos = self.agents_coords[i]
+            self.agents[i].dir = 0
 
 
     # If the agent is on the switch, open the door
@@ -120,8 +128,9 @@ class DoorGameEnv(MultiGridEnv):
                 # Drop ball on goal
                 if fwd_cell.type == 'objgoal' and fwd_cell.target_type == self.agents[i].carrying.type:
                     if self.agents[i].carrying.index in [0, fwd_cell.index]:
-                        # self._reward(fwd_cell.index, rewards, fwd_cell.reward)
+                        self._reward(fwd_cell.index, rewards, fwd_cell.reward)
                         self.agents[i].carrying = None
+                        return True
                 # Give ball to other agent
                 elif fwd_cell.type=='agent':
                     if fwd_cell.carrying is None:
@@ -131,12 +140,16 @@ class DoorGameEnv(MultiGridEnv):
                 self.grid.set(*fwd_pos, self.agents[i].carrying)
                 self.agents[i].carrying.cur_pos = fwd_pos
                 self.agents[i].carrying = None
+        return False
 
 
     def _reward(self, i, rewards,reward=1):
-        # Shared reward for all agents
+        # Shared reward for all agents, divide by number of agents to keep reward in range [0, 1]
         for j,a in enumerate(self.agents):
-                rewards[j]+=reward
+                if self.decaying_reward:
+                    rewards[i] = (1 - 0.9 * (self.step_count / self.max_steps))/self.num_agents
+                else:
+                    rewards[j]+=reward
                 #print(f"Agent {j} got reward {reward}")
 
 
