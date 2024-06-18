@@ -916,7 +916,8 @@ class MultiGridEnv(gym.Env):
             actions_set=Actions,
             objects_set = World,
             door=None,
-            door_pos=None
+            door_pos=None,
+            preassureplates= None,
     ):
         self.agents = agents
 
@@ -971,6 +972,7 @@ class MultiGridEnv(gym.Env):
         #TODO: very hacky
         self.door=door 
         self.door_pos=door_pos
+        self.preassureplates=preassureplates = preassureplates
 
         # Initialize the RNG
         self.seed(seed=seed)
@@ -1286,13 +1288,13 @@ class MultiGridEnv(gym.Env):
         terminated = False
         
         # If actions is a list of probabilities, sample one action for each agent
-        #if not np.issubdtype(actions[0].dtype,np.integer):
-        #    for j in range(len(actions)):
-        #        action = np.random.choice(len(actions[j]), p=actions[j])
-        #        actions[j] = action
+        if not np.issubdtype(actions[0].dtype,np.integer):
+            for j in range(len(actions)):
+                action = np.random.choice(len(actions[j]), p=actions[j])
+                actions[j] = action
 
         for i in order:
-
+            
             if self.agents[i].terminated or self.agents[i].paused or not self.agents[i].started or actions[i] == self.actions.still:
                 continue
 
@@ -1321,11 +1323,19 @@ class MultiGridEnv(gym.Env):
                     elif fwd_cell.type == 'switch':
                         self._handle_switch(i, rewards, fwd_pos, fwd_cell)
                 if fwd_cell is None or fwd_cell.can_overlap():
-                    #TODO: I passed my only door directly, better to manage previous grid items
+                    #TODO: I passed my only door directly and preassureplate, better to manage previous grid items
                     self.grid.set(*fwd_pos, self.agents[i])
-                    if np.array_equal(self.agents[i].pos, np.array(self.door_pos)) and self.door is not None:
+                    overrideWithNone = True
+                    if self.door is not None and np.array_equal(self.agents[i].pos, np.array(self.door_pos)):
                         self.grid.set(*self.agents[i].pos, self.door)
-                    else:
+                        overrideWithNone = False
+                    elif self.preassureplates is not None:
+                        for preassureplate in self.preassureplates:
+                            print("Step!",self.agents[i].pos, preassureplate.pos, np.array_equal(self.agents[i].pos, np.array(preassureplate.pos)))
+                            if np.array_equal(self.agents[i].pos, np.array(preassureplate.pos)):
+                                self.grid.set(*self.agents[i].pos, preassureplate.switch)
+                                overrideWithNone = False
+                    if overrideWithNone:
                         self.grid.set(*self.agents[i].pos, None)
                     self.agents[i].pos = fwd_pos
                 self._handle_special_moves(i, rewards, fwd_pos, fwd_cell)

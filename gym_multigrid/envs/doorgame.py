@@ -9,7 +9,7 @@ class DoorGameEnv(MultiGridEnv):
     ):
         self.world = World
         self.door = Door(self.world, 'red', is_open=False, is_locked=True)
-        self.door_pos = (6, 3)
+        
         self.agents: List[Agent] = []
         self.pressure_plates: List[PreassurePlate] = []
         self.reward_tile_coords = env_config["reward_tile_coords"]
@@ -25,8 +25,12 @@ class DoorGameEnv(MultiGridEnv):
         self.easy_reward = env_config["easy_reward"]
         self.pressure_plates_pressed_reward = False
         self.ball_picked_up_reward = False
+        self.version = env_config["version"]
         self.see_through_walls = env_config.get('see_through_walls', False)
         self.decaying_reward = env_config.get('decaying_reward', False)
+        self.door_coords = env_config.get('door_coords', (6, 3))
+        # Metrics, number of completed tasks (preassure plate, ball pickup) by each agent per episode
+        self.completed_task_by_agent = [[0,0],[0,0]]
 
         if self.easy_reward:
             self.pressure_plates_pressed_reward = True
@@ -50,8 +54,9 @@ class DoorGameEnv(MultiGridEnv):
             agent_view_size=self.view_size,
             partial_obs=self.partial_obs, 
             door=self.door,
-            door_pos=self.door_pos,
-            see_through_walls=self.see_through_walls
+            door_pos=self.door_coords,
+            see_through_walls=self.see_through_walls,
+            preassureplates=self.pressure_plates,
         )
 
 
@@ -65,12 +70,17 @@ class DoorGameEnv(MultiGridEnv):
         self.grid.vert_wall(self.world, width-1, 0)
 
         # Door walls
-        self.grid.vert_wall(self.world, width-5, 0, 3)
-        self.grid.vert_wall(self.world, width-5, height-3, 3)
+        self.grid.vert_wall(self.world, self.door_coords[0], 0, 3)
+        self.grid.vert_wall(self.world, self.door_coords[0], height-3, 3)
 
         # Door
         self.door.is_open = False
-        self.grid.set(self.door_pos[0], self.door_pos[1], self.door)
+        self.grid.set(self.door_coords[0], self.door_coords[1], self.door)
+
+        # Fill with walls around the goal for version >1_0
+        if float(self.version.replace("_", ".")) >= 1.0:
+            self.grid.vert_wall(self.world, self.door_coords[0]+1, 0, 3)
+            self.grid.vert_wall(self.world, self.door_coords[0]+1, height-3, 3)
         
         # Preassure plates
         for pressure_plate in self.pressure_plates:
@@ -91,6 +101,9 @@ class DoorGameEnv(MultiGridEnv):
             self.agents[i].pos = self.agents_coords[i]
             self.agents[i].dir = 0
 
+        # Reset metrics
+        self.completed_task_by_agent = [[0,0],[0,0]]
+
 
     # If the agent is on the switch, open the door
     def _handle_special_moves(self, i, rewards, fwd_pos, fwd_cell):
@@ -99,6 +112,8 @@ class DoorGameEnv(MultiGridEnv):
             if np.array_equal(pressure_plate.pos, agent.pos):
                 self.door.is_open = True
                 pressure_plate.occupied = i
+                # Keep track of completed tasks
+                self.completed_task_by_agent[i][0] += 1
                 # In easy mode, give a reward for reaching the pressure plate
                 if self.pressure_plates_pressed_reward == True:
                     self._reward(i, rewards, reward=0.5)
@@ -116,6 +131,8 @@ class DoorGameEnv(MultiGridEnv):
                     self.agents[i].carrying = fwd_cell
                     self.agents[i].carrying.cur_pos = np.array([-1, -1])
                     self.grid.set(*fwd_pos, None)
+                    # Keep track of completed tasks
+                    self.completed_task_by_agent[i][1] += 1
                     # In easy mode, give a reward for picking up the ball
                     if self.ball_picked_up_reward == True:
                         self._reward(i, rewards, reward=0.5)
@@ -128,7 +145,7 @@ class DoorGameEnv(MultiGridEnv):
                 # Drop ball on goal
                 if fwd_cell.type == 'objgoal' and fwd_cell.target_type == self.agents[i].carrying.type:
                     if self.agents[i].carrying.index in [0, fwd_cell.index]:
-                        self._reward(fwd_cell.index, rewards, fwd_cell.reward)
+                        self._reward(fwd_cell.index, rewards, reward=1)
                         self.agents[i].carrying = None
                         return True
                 # Give ball to other agent
@@ -149,12 +166,14 @@ class DoorGameEnv(MultiGridEnv):
                 if self.decaying_reward:
                     rewards[i] = (1 - 0.9 * (self.step_count / self.max_steps))/self.num_agents
                 else:
-                    rewards[j]+=reward
+                    rewards[j]+=reward/2
                 #print(f"Agent {j} got reward {reward}")
 
 
     def step(self, actions):
         obs, rewards, done, truncated, info = MultiGridEnv.step(self, actions)
+        # Custom metrics
+        info['completed_task_by_agent'] = self.completed_task_by_agent
         return obs, rewards, done, truncated, info
 
 

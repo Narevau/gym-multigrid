@@ -13,4 +13,5 @@ gym_multigrid.egg-info/top_level.txt
 gym_multigrid/envs/__init__.py
 gym_multigrid/envs/collect_game.py
 gym_multigrid/envs/doorgame.py
+gym_multigrid/envs/goalgame.py
 gym_multigrid/envs/soccer_game.py
