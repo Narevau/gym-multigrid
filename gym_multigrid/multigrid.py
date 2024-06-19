@@ -1331,7 +1331,6 @@ class MultiGridEnv(gym.Env):
                         overrideWithNone = False
                     elif self.preassureplates is not None:
                         for preassureplate in self.preassureplates:
-                            print("Step!",self.agents[i].pos, preassureplate.pos, np.array_equal(self.agents[i].pos, np.array(preassureplate.pos)))
                             if np.array_equal(self.agents[i].pos, np.array(preassureplate.pos)):
                                 self.grid.set(*self.agents[i].pos, preassureplate.switch)
                                 overrideWithNone = False

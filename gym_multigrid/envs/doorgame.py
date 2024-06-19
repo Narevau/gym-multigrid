@@ -164,7 +164,7 @@ class DoorGameEnv(MultiGridEnv):
         # Shared reward for all agents, divide by number of agents to keep reward in range [0, 1]
         for j,a in enumerate(self.agents):
                 if self.decaying_reward:
-                    rewards[i] = (1 - 0.9 * (self.step_count / self.max_steps))/self.num_agents
+                    rewards[j] = (1 - 0.9 * (self.step_count / self.max_steps))/self.num_agents
                 else:
                     rewards[j]+=reward/2
                 #print(f"Agent {j} got reward {reward}")
