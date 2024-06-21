@@ -22,7 +22,7 @@ class DoorGameEnv(MultiGridEnv):
         self.partial_obs = env_config["partial_obs"]
         self.num_agents = len(self.agents_index)
         self.max_steps = env_config["max_steps"]
-        self.easy_reward = env_config["easy_reward"]
+        self.easy_reward = env_config.get('easy_reward', False)
         self.pressure_plates_pressed_reward = False
         self.ball_picked_up_reward = False
         self.version = env_config["version"]
